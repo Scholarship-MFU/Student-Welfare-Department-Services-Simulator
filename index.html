@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Student Services Simulator 3D</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Three.js (3D Library) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            overflow: hidden; 
+            touch-action: none; 
+            background-color: #0f172a; 
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+        #game-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+        .ui-layer {
+            position: relative;
+            z-index: 10;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none; /* Let clicks pass through to 3D canvas if needed */
+        }
+        .ui-layer > * {
+            pointer-events: auto; /* Re-enable pointer events for actual UI elements */
+        }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.9); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Canvas Container -->
+    <div id="game-container"></div>
+
+    <!-- UI Overlay Layer -->
+    <div class="ui-layer">
+        
+        <!-- Start Screen Overlay -->
+        <div id="startOverlay" class="absolute inset-0 bg-slate-900/90 backdrop-blur-md flex justify-center items-center z-50 transition-opacity duration-700">
+            <div class="bg-white p-6 sm:p-8 rounded-3xl text-center max-w-lg w-[90%] shadow-2xl border border-white/20 relative overflow-hidden animate-pop">
+                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500"></div>
+                <div class="bg-teal-50 text-teal-600 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner border border-teal-100">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800 mb-2">Student Welfare Department</h1>
+                <div class="inline-block bg-slate-100 px-4 py-1.5 rounded-full mb-6 border border-slate-200">
+                    <p class="text-slate-600 font-semibold sm:text-lg flex items-center gap-2">
+                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                        Room 113 (3D System)
+                    </p>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 text-left">
+                    <div class="bg-slate-50 hover:bg-white p-4 rounded-2xl border border-slate-100 hover:border-slate-300 transition-colors shadow-sm">
+                        <span class="block font-bold text-slate-700 mb-2 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                            Controls
+                        </span>
+                        <p class="text-sm text-slate-500 leading-relaxed">Use W A S D or Arrow keys to walk to the desired desk, and press the prompt button for service.</p>
+                    </div>
+                </div>
+                <button id="startBtn" class="w-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold py-3.5 px-8 rounded-xl shadow-lg shadow-teal-500/30 transition-all transform hover:scale-[1.02] active:scale-95 text-lg flex justify-center items-center gap-2">
+                    Enter Office
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Interaction Prompt Button -->
+        <button id="interactPrompt" class="hidden absolute bottom-32 sm:bottom-12 left-1/2 transform -translate-x-1/2 bg-white text-blue-700 px-6 py-3 rounded-full shadow-2xl text-lg font-bold animate-bounce hover:scale-105 transition-all z-20 flex items-center gap-3 border-2 border-blue-100 group">
+            <div class="bg-blue-600 text-white rounded-full p-1.5 group-hover:bg-blue-700 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+            </div>
+            <span id="promptText" class="whitespace-nowrap">Contact Desk</span>
+            <span class="text-xs font-normal bg-blue-50 text-blue-500 px-2 py-1 rounded-md hidden sm:inline-block border border-blue-100">[Spacebar]</span>
+        </button>
+
+        <!-- Information Modal -->
+        <div id="infoModal" class="hidden absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center p-4 z-40 transition-opacity duration-300 opacity-0">
+            <div id="modalContent" class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden transform scale-95 transition-all duration-300 relative">
+                <div id="modalHeader" class="p-6 relative text-center">
+                    <div class="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
+                    <h2 id="modalTitle" class="text-2xl font-bold text-white relative z-10 drop-shadow-md">Service Name</h2>
+                    <button id="closeModalBtn" class="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full p-1 transition-colors z-20 focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6 sm:p-8">
+                    <!-- Added whitespace-pre-line and text-left to handle multiline descriptions correctly -->
+                    <p id="modalDesc" class="text-slate-600 text-[1.05rem] leading-relaxed mb-6 text-left whitespace-pre-line">Details...</p>
+                </div>
+                <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-center">
+                    <button id="finishBtn" class="bg-slate-800 hover:bg-slate-900 text-white font-medium py-2.5 px-8 rounded-xl shadow transition-colors w-full sm:w-auto">Finish</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Directional Controls -->
+        <div id="mobileControls" class="absolute bottom-6 left-6 z-10 sm:hidden">
+            <div class="grid grid-cols-3 gap-2 opacity-80">
+                <div></div>
+                <button id="btnUp" class="w-14 h-14 bg-white/90 backdrop-blur-md rounded-full flex justify-center items-center shadow-lg active:bg-slate-200 transition-colors">
+                    <svg class="w-8 h-8 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                </button>
+                <div></div>
+                <button id="btnLeft" class="w-14 h-14 bg-white/90 backdrop-blur-md rounded-full flex justify-center items-center shadow-lg active:bg-slate-200 transition-colors">
+                    <svg class="w-8 h-8 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
+                <button id="btnDown" class="w-14 h-14 bg-white/90 backdrop-blur-md rounded-full flex justify-center items-center shadow-lg active:bg-slate-200 transition-colors">
+                     <svg class="w-8 h-8 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <button id="btnRight" class="w-14 h-14 bg-white/90 backdrop-blur-md rounded-full flex justify-center items-center shadow-lg active:bg-slate-200 transition-colors">
+                    <svg class="w-8 h-8 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 3D Engine Setup (Three.js) ---
+        const container = document.getElementById('game-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color('#0f172a'); // Background matching HTML
+        
+        // Add Fog for depth
+        scene.fog = new THREE.FogExp2('#0f172a', 0.015);
+
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        // --- Lighting ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // Soft white light
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xfff0dd, 0.8);
+        dirLight.position.set(20, 40, -20);
+        dirLight.castShadow = true;
+        dirLight.shadow.camera.left = -50;
+        dirLight.shadow.camera.right = 50;
+        dirLight.shadow.camera.top = 50;
+        dirLight.shadow.camera.bottom = -50;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 100;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        scene.add(dirLight);
+
+        // --- Game State & Input ---
+        let isGameRunning = false;
+        let isModalOpen = false;
+        let nearbyDesk = null;
+        const keys = {};
+
+        // --- 3D Room Dimensions (1 unit = 10px from 2D approx) ---
+        const ROOM_WIDTH = 100;
+        const ROOM_DEPTH = 70;
+
+        // Bounding Boxes for collisions
+        const collisionBoxes = [];
+
+        // --- Materials ---
+        const floorMat = new THREE.MeshStandardMaterial({ color: '#f8fafc', roughness: 0.8 });
+        const wallMat = new THREE.MeshStandardMaterial({ color: '#cbd5e1', roughness: 0.9 });
+        const deskWoodMat = new THREE.MeshStandardMaterial({ color: '#e2e8f0', roughness: 0.5 });
+        const deskTrimMat = new THREE.MeshStandardMaterial({ color: '#f1f5f9', roughness: 0.7 });
+        const computerMat = new THREE.MeshStandardMaterial({ color: '#334155', roughness: 0.3 });
+        const skinMat = new THREE.MeshStandardMaterial({ color: '#fde047', roughness: 0.6 });
+        const hairMat = new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.9 });
+
+        // --- Build Environment ---
+        function createEnvironment() {
+            // Floor
+            const floorGeo = new THREE.PlaneGeometry(ROOM_WIDTH, ROOM_DEPTH);
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Center Rug
+            const rugGeo = new THREE.PlaneGeometry(30, 40);
+            const rugMat = new THREE.MeshStandardMaterial({ color: '#e0e7ff', roughness: 0.9 });
+            const rug = new THREE.Mesh(rugGeo, rugMat);
+            rug.rotation.x = -Math.PI / 2;
+            rug.position.set(-10, 0.05, -15);
+            rug.receiveShadow = true;
+            scene.add(rug);
+
+            // Walls
+            const wallH = 15;
+            const wallThickness = 2;
+            
+            // Left Wall
+            const wLeft = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallH, ROOM_DEPTH), wallMat);
+            wLeft.position.set(-ROOM_WIDTH/2 - wallThickness/2, wallH/2, 0);
+            wLeft.receiveShadow = true; wLeft.castShadow = true;
+            scene.add(wLeft);
+            collisionBoxes.push(new THREE.Box3().setFromObject(wLeft));
+
+            // Right Wall
+            const wRight = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallH, ROOM_DEPTH), wallMat);
+            wRight.position.set(ROOM_WIDTH/2 + wallThickness/2, wallH/2, 0);
+            wRight.receiveShadow = true; wRight.castShadow = true;
+            scene.add(wRight);
+            collisionBoxes.push(new THREE.Box3().setFromObject(wRight));
+
+            // Back Wall
+            const wBack = new THREE.Mesh(new THREE.BoxGeometry(ROOM_WIDTH, wallH, wallThickness), wallMat);
+            wBack.position.set(0, wallH/2, -ROOM_DEPTH/2 - wallThickness/2);
+            wBack.receiveShadow = true; wBack.castShadow = true;
+            scene.add(wBack);
+            collisionBoxes.push(new THREE.Box3().setFromObject(wBack));
+            
+            // Plants
+            createPlant( -ROOM_WIDTH/2 + 4, -ROOM_DEPTH/2 + 4 );
+            createPlant( ROOM_WIDTH/2 - 4, -ROOM_DEPTH/2 + 4 );
+            createPlant( -ROOM_WIDTH/2 + 4, ROOM_DEPTH/2 - 12 );
+            
+            // Waiting Couch
+            createCouch( -10, ROOM_DEPTH/2 - 25 );
+            
+            // Create Entrance Sign
+            createEntranceSign();
+        }
+
+        function createEntranceSign() {
+            const signGroup = new THREE.Group();
+            
+            // Sign Board Base
+            const backGeo = new THREE.BoxGeometry(24, 6, 0.5);
+            const backMat = new THREE.MeshStandardMaterial({ color: '#1e293b' }); // สีน้ำเงินเข้ม
+            const backMesh = new THREE.Mesh(backGeo, backMat);
+            backMesh.position.y = 14;
+            backMesh.castShadow = true;
+            signGroup.add(backMesh);
+            
+            // Sign Texture Plane (Front)
+            const frontGeo = new THREE.PlaneGeometry(23.8, 5.8);
+            const frontMat = new THREE.MeshBasicMaterial({ color: '#0f766e' }); // สีพื้นหลังชั่วคราวก่อนโหลด Text
+            const frontMesh = new THREE.Mesh(frontGeo, frontMat);
+            frontMesh.position.set(0, 14, 0.26); // วางซ้อนด้านหน้า
+            signGroup.add(frontMesh);
+
+            // Poles (เสาป้าย)
+            const poleGeo = new THREE.CylinderGeometry(0.4, 0.4, 16, 8);
+            const poleMat = new THREE.MeshStandardMaterial({ color: '#94a3b8' });
+            
+            const leftPole = new THREE.Mesh(poleGeo, poleMat);
+            leftPole.position.set(-11, 8, 0);
+            leftPole.castShadow = true;
+            
+            const rightPole = new THREE.Mesh(poleGeo, poleMat);
+            rightPole.position.set(11, 8, 0);
+            rightPole.castShadow = true;
+            
+            signGroup.add(leftPole);
+            signGroup.add(rightPole);
+
+            // Place at entrance (วางตรงจุดเกิดผู้เล่น)
+            signGroup.position.set(0, 0, ROOM_DEPTH/2 - 1);
+            scene.add(signGroup);
+            
+            // Add collisions for the poles (ผู้เล่นเดินชนเสาได้)
+            collisionBoxes.push(new THREE.Box3().setFromObject(leftPole));
+            collisionBoxes.push(new THREE.Box3().setFromObject(rightPole));
+            
+            // Entrance Mat (พรมทางเข้า)
+            const matGeo = new THREE.PlaneGeometry(16, 8);
+            const matMat = new THREE.MeshStandardMaterial({ color: '#334155', roughness: 0.9 });
+            const mat = new THREE.Mesh(matGeo, matMat);
+            mat.rotation.x = -Math.PI / 2;
+            mat.position.set(0, 0.06, ROOM_DEPTH/2 - 4);
+            mat.receiveShadow = true;
+            scene.add(mat);
+
+            // Render Text Texture once fonts are loaded
+            document.fonts.ready.then(() => {
+                const signCanvas = document.createElement('canvas');
+                signCanvas.width = 1024;
+                signCanvas.height = 256;
+                const ctx = signCanvas.getContext('2d');
+                
+                // Gradient background
+                const grad = ctx.createLinearGradient(0, 0, 1024, 0);
+                grad.addColorStop(0, '#0f766e'); // Teal 700
+                grad.addColorStop(1, '#0369a1'); // Sky 700
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, signCanvas.width, signCanvas.height);
+                
+                // Border
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 8;
+                ctx.strokeRect(8, 8, signCanvas.width - 16, signCanvas.height - 16);
+
+                // Text Settings
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 10;
+                ctx.shadowOffsetX = 4;
+                ctx.shadowOffsetY = 4;
+                
+                // Department Name
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 55px Sarabun'; // Reduced font size for longer English text
+                ctx.fillText('Student Welfare Department', signCanvas.width / 2, signCanvas.height / 2 - 20);
+                
+                // Room Number
+                ctx.font = 'bold 45px Sarabun';
+                ctx.fillStyle = '#bae6fd';
+                ctx.fillText('Room 113', signCanvas.width / 2, signCanvas.height / 2 + 55);
+
+                const texture = new THREE.CanvasTexture(signCanvas);
+                texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                frontMesh.material.map = texture;
+                frontMesh.material.color.set('#ffffff'); // Reset base color
+                frontMesh.material.needsUpdate = true;
+            });
+        }
+
+        function createPlant(x, z) {
+            const plantGroup = new THREE.Group();
+            
+            // Pot
+            const potGeo = new THREE.CylinderGeometry(1.2, 0.8, 2, 8);
+            const potMat = new THREE.MeshStandardMaterial({ color: '#ffffff' });
+            const pot = new THREE.Mesh(potGeo, potMat);
+            pot.position.y = 1;
+            pot.castShadow = true;
+            plantGroup.add(pot);
+
+            // Leaves
+            const leafGeo = new THREE.SphereGeometry(1.5, 7, 7);
+            const leafMat = new THREE.MeshStandardMaterial({ color: '#10b981', roughness: 0.8 });
+            const leaf = new THREE.Mesh(leafGeo, leafMat);
+            leaf.position.y = 3;
+            leaf.scale.set(1, 1.5, 1);
+            leaf.castShadow = true;
+            plantGroup.add(leaf);
+
+            plantGroup.position.set(x, 0, z);
+            scene.add(plantGroup);
+            collisionBoxes.push(new THREE.Box3().setFromObject(pot));
+        }
+
+        function createCouch(x, z) {
+            const couchGroup = new THREE.Group();
+            const couchMat = new THREE.MeshStandardMaterial({ color: '#64748b' });
+            
+            // Seat
+            const seat = new THREE.Mesh(new THREE.BoxGeometry(15, 1.5, 4), couchMat);
+            seat.position.y = 1.5;
+            seat.castShadow = true; seat.receiveShadow = true;
+            couchGroup.add(seat);
+            
+            // Back
+            const back = new THREE.Mesh(new THREE.BoxGeometry(15, 4, 1), couchMat);
+            back.position.set(0, 3.5, -1.5);
+            back.castShadow = true; back.receiveShadow = true;
+            couchGroup.add(back);
+
+            couchGroup.position.set(x, 0, z);
+            scene.add(couchGroup);
+            collisionBoxes.push(new THREE.Box3().setFromObject(seat));
+        }
+
+        function createPerson(colorHex, gender, isPlayer = false) {
+            const group = new THREE.Group();
+            const shirtMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.7 });
+
+            // Body
+            const bodyGeo = new THREE.CylinderGeometry(1.2, 1.2, 3, 12);
+            const body = new THREE.Mesh(bodyGeo, shirtMat);
+            body.position.y = 1.5;
+            body.castShadow = true;
+            group.add(body);
+
+            // Head
+            const headGeo = new THREE.SphereGeometry(1.1, 16, 16);
+            const head = new THREE.Mesh(headGeo, skinMat);
+            head.position.y = 4;
+            head.castShadow = true;
+            group.add(head);
+
+            // Hair
+            const hairBaseGeo = new THREE.SphereGeometry(1.15, 16, 16, 0, Math.PI * 2, 0, Math.PI/2);
+            const hair = new THREE.Mesh(hairBaseGeo, hairMat);
+            hair.position.y = 4;
+            group.add(hair);
+
+            if (gender === 'F') {
+                // Female Bun/Ponytail
+                const bunGeo = new THREE.SphereGeometry(0.6, 8, 8);
+                const bun = new THREE.Mesh(bunGeo, hairMat);
+                bun.position.set(0, 4, -1);
+                group.add(bun);
+            }
+
+            // Direction Indicator (Nose)
+            const noseGeo = new THREE.SphereGeometry(0.2, 8, 8);
+            const nose = new THREE.Mesh(noseGeo, new THREE.MeshStandardMaterial({color: '#eab308'}));
+            nose.position.set(0, 4, 1.05); // Nose pointing +Z locally
+            group.add(nose);
+
+            return group;
+        }
+
+        // --- Desk Definitions (Mapped to 3D Space) ---
+        // 3D Center (0,0). Width=100 (x: -50 to 50), Depth=70 (z: -35 to 35)
+        const desksData = [
+            {
+                id: 'lunch', name: 'Student Lunch Project', short: 'Lunch Project',
+                staffGender: 'F', desc: 'This project is designed for students who wish to earn extra income during their studies. Students can assist with operations across various university departments, working up to 4 hours per day at a rate of 30 THB/Hour.',
+                items: ['Apply for Lunch Project', 'Check Eligibility', 'Receive Food Coupons'],
+                color: '#f59e0b', 
+                x: 35, z: 20, w: 7, d: 10, isVertical: true // โต๊ะ 1 ขวาล่าง
+            },
+            {
+                id: 'sch', name: 'Scholarships', short: 'Scholarships',
+                staffGender: 'F', desc: 'Two types of scholarships are available to apply for :\n1. MFU Scholarships\n    - Value : 12,000 THB/Academic year\n    - Discontinuous\n2. Scholarship of Princess Srinagarindra\'s Centenary Celebrations Foundation\n    - Value : 25,000 THB/Academic year\n    - Discontinuous',
+                items: ['Inquire about Scholarships', 'Submit Scholarship Documents', 'Track Application Status'],
+                color: '#10b981', 
+                x: 35, z: 4, w: 7, d: 10, isVertical: true // โต๊ะ 2 ขวากลาง
+            },
+            {
+                id: 'loan', name: 'Emergency Loan', short: 'Emergency Loan',
+                staffGender: 'F', desc: 'This project aims to relieve temporary financial distress arising from urgent and unforeseen life or educational needs for Mae Fah Luang University students. Students can borrow up to 2,000 THB/Request, interest-free, with a maximum repayment term of 30 days from the date of borrowing.',
+                items: ['Inquire about Loan Conditions', 'Submit Loan Application', 'Repay Loan'],
+                color: '#3b82f6', 
+                x: 35, z: -7, w: 7, d: 10, isVertical: true // โต๊ะ 3 ขวาติดโต๊ะ 2
+            },
+            {
+                id: 'thaichuaythai', name: 'Thai Chuay Thai Emergency Loan Fund', short: 'Thai Chuay Thai',
+                staffGender: 'M', desc: 'This initiative helps alleviate financial hardship for students struggling with educational expenses. Students may submit a request to borrow up to 5,000 THB/Semester, interest-free, with full repayment required within the same semester the loan is granted.',
+                items: ['Request Thai Chuay Thai Loan', 'Submit Contract Documents', 'Repay Loan Fund'],
+                color: '#ec4899', 
+                x: 35, z: -22, w: 7, d: 10, isVertical: true // โต๊ะ 4 ขวาบนสุด
+            },
+            {
+                id: 'fee', name: 'Tuition Fee Extension', short: 'Fee Extension',
+                staffGender: 'F', desc: 'This scheme provides financial relief to students with demonstrated need for tuition fee payments in a given semester. Students may receive a temporary extension to pay in installments according to a specified schedule; full payment must be completed within that semester to qualify for enrollment in the following semester.',
+                items: ['Submit Extension Request', 'Check Approval Status', 'Inquire about Payment Schedule'],
+                color: '#8b5cf6', 
+                x: -30, z: -7, w: 14, d: 7, isVertical: false // โต๊ะ 5 ซ้ายมือ ตรงข้ามโต๊ะ 2,3
+            }
+        ];
+
+        function createDesks() {
+            desksData.forEach(desk => {
+                const deskGroup = new THREE.Group();
+                
+                // Desk Base
+                const baseGeo = new THREE.BoxGeometry(desk.w, 3, desk.d);
+                const base = new THREE.Mesh(baseGeo, deskTrimMat);
+                base.position.y = 1.5;
+                base.castShadow = true; base.receiveShadow = true;
+                deskGroup.add(base);
+
+                // Desk Top
+                const topGeo = new THREE.BoxGeometry(desk.w - 0.5, 0.5, desk.d - 0.5);
+                const top = new THREE.Mesh(topGeo, deskWoodMat);
+                top.position.y = 3.25;
+                top.castShadow = true;
+                deskGroup.add(top);
+
+                // Department Color Banner
+                const bannerMat = new THREE.MeshStandardMaterial({ color: desk.color, roughness: 0.4 });
+                if (desk.isVertical) {
+                    const banner = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, desk.d - 1), bannerMat);
+                    banner.position.set(-desk.w/2 - 0.1, 2, 0); // Front facing player (Left side of vertical desk)
+                    deskGroup.add(banner);
+                    
+                    // Computer
+                    const pc = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 3), computerMat);
+                    pc.position.set(desk.w/2 - 1.5, 4, 0);
+                    deskGroup.add(pc);
+                } else {
+                    const banner = new THREE.Mesh(new THREE.BoxGeometry(desk.w - 1, 1, 0.2), bannerMat);
+                    banner.position.set(0, 2, desk.d/2 + 0.1); // Front facing player
+                    deskGroup.add(banner);
+
+                    // Computer
+                    const pc = new THREE.Mesh(new THREE.BoxGeometry(3, 2, 1), computerMat);
+                    pc.position.set(0, 4, -desk.d/2 + 1.5);
+                    deskGroup.add(pc);
+                }
+
+                deskGroup.position.set(desk.x, 0, desk.z);
+                scene.add(deskGroup);
+                
+                // Add to collision
+                const collisionBox = new THREE.Box3().setFromObject(deskGroup);
+                collisionBoxes.push(collisionBox);
+
+                // --- Staff Member & Chair Setup ---
+                const staff = createPerson(desk.color, desk.staffGender, false);
+                
+                // Determine positions based on orientation
+                let staffX = desk.x;
+                let staffZ = desk.z;
+                let chairX = desk.x;
+                let chairZ = desk.z;
+
+                if (desk.isVertical) {
+                    // Vertical desk (Right wall). Staff inside (+X), Chair outside (-X)
+                    staffX = desk.x + desk.w/2 + 2; 
+                    chairX = desk.x - desk.w/2 - 4;
+                    // Rotate staff to face left (-X)
+                    staff.rotation.y = -Math.PI / 2;
+                } else {
+                    // Horizontal desk (Left side). Staff inside (-Z), Chair outside (+Z)
+                    staffZ = desk.z - desk.d/2 - 2;
+                    chairZ = desk.z + desk.d/2 + 4;
+                    // Rotate staff to face forward (+Z)
+                    staff.rotation.y = 0;
+                }
+
+                staff.position.set(staffX, 0, staffZ);
+                scene.add(staff);
+                
+                // Save interaction position to desk object
+                desk.chairPos = { x: chairX, z: chairZ };
+
+                // Draw Simple Chair (Cube)
+                const chairMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshStandardMaterial({color: '#94a3b8'}));
+                chairMesh.position.set(chairX, 1, chairZ);
+                chairMesh.castShadow = true;
+                scene.add(chairMesh);
+                
+                // Add chair to collision so player doesn't walk through it
+                const chairBox = new THREE.Box3().setFromObject(chairMesh);
+                // Make chair collision slightly smaller to allow getting close
+                chairBox.expandByScalar(-0.5); 
+                collisionBoxes.push(chairBox);
+            });
+        }
+
+        createEnvironment();
+        createDesks();
+
+        // --- Player ---
+        const player = createPerson('#3b82f6', 'M', true);
+        player.position.set(0, 0, ROOM_DEPTH/2 - 5); // Start near bottom entrance
+        scene.add(player);
+        
+        const playerSpeed = 15; // Units per second
+        const playerRadius = 1.2;
+
+        // Input Handling
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'Space' && nearbyDesk && !isModalOpen && isGameRunning) {
+                e.preventDefault();
+                openModal(nearbyDesk);
+            }
+        });
+        window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        // Mobile Controls Binding
+        function bindTouchBtn(id, keyCodes) {
+            const btn = document.getElementById(id);
+            if(!btn) return;
+            const press = (e) => { if(e.cancelable) e.preventDefault(); keyCodes.forEach(code => keys[code] = true); };
+            const release = (e) => { if(e.cancelable) e.preventDefault(); keyCodes.forEach(code => keys[code] = false); };
+            btn.addEventListener('mousedown', press);
+            btn.addEventListener('mouseup', release);
+            btn.addEventListener('mouseleave', release);
+            btn.addEventListener('touchstart', press, {passive: false});
+            btn.addEventListener('touchend', release, {passive: false});
+            btn.addEventListener('touchcancel', release, {passive: false});
+        }
+        bindTouchBtn('btnUp', ['ArrowUp', 'KeyW']);
+        bindTouchBtn('btnDown', ['ArrowDown', 'KeyS']);
+        bindTouchBtn('btnLeft', ['ArrowLeft', 'KeyA']);
+        bindTouchBtn('btnRight', ['ArrowRight', 'KeyD']);
+
+        // UI Event Listeners
+        document.getElementById('startBtn').addEventListener('click', () => {
+            const overlay = document.getElementById('startOverlay');
+            overlay.classList.add('opacity-0');
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                isGameRunning = true;
+            }, 700);
+        });
+
+        document.getElementById('interactPrompt').addEventListener('click', (e) => {
+            e.preventDefault();
+            if (nearbyDesk && !isModalOpen && isGameRunning) {
+                openModal(nearbyDesk);
+            }
+        });
+
+        // Simple AABB Collision for 3D (Checking X/Z plane)
+        function checkCollision(newX, newZ) {
+            const pBox = new THREE.Box3();
+            // Create a small bounding box around player intended position
+            pBox.min.set(newX - playerRadius, 0, newZ - playerRadius);
+            pBox.max.set(newX + playerRadius, 5, newZ + playerRadius);
+
+            for (let i = 0; i < collisionBoxes.length; i++) {
+                if (pBox.intersectsBox(collisionBoxes[i])) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // --- Game Loop ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const dt = clock.getDelta();
+
+            if (isGameRunning && !isModalOpen) {
+                let dx = 0;
+                let dz = 0;
+                
+                if (keys['ArrowUp'] || keys['KeyW']) dz -= 1;
+                if (keys['ArrowDown'] || keys['KeyS']) dz += 1;
+                if (keys['ArrowLeft'] || keys['KeyA']) dx -= 1;
+                if (keys['ArrowRight'] || keys['KeyD']) dx += 1;
+                
+                // Normalize
+                if (dx !== 0 && dz !== 0) {
+                    const len = Math.hypot(dx, dz);
+                    dx /= len;
+                    dz /= len;
+                }
+
+                if (dx !== 0 || dz !== 0) {
+                    // Try X movement
+                    const nextX = player.position.x + dx * playerSpeed * dt;
+                    if (!checkCollision(nextX, player.position.z)) {
+                        player.position.x = nextX;
+                    }
+                    
+                    // Try Z movement
+                    const nextZ = player.position.z + dz * playerSpeed * dt;
+                    if (!checkCollision(player.position.x, nextZ)) {
+                        player.position.z = nextZ;
+                    }
+
+                    // Rotate player to face movement direction
+                    const targetAngle = Math.atan2(dx, dz);
+                    // Smooth rotation (slerp-like for Y axis)
+                    const currentAngle = player.rotation.y;
+                    // Fix rotation wrapping issue
+                    let diff = targetAngle - currentAngle;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    player.rotation.y += diff * 10 * dt;
+
+                    // Walking animation (Bobbing)
+                    player.position.y = Math.abs(Math.sin(clock.getElapsedTime() * 15)) * 0.5;
+                } else {
+                    player.position.y = 0; // Reset Y when standing still
+                }
+
+                // Check Interaction Zone
+                nearbyDesk = null;
+                for (const desk of desksData) {
+                    const dist = Math.hypot(player.position.x - desk.chairPos.x, player.position.z - desk.chairPos.z);
+                    if (dist < 4) { // Interaction radius in 3D units
+                        nearbyDesk = desk;
+                        break;
+                    }
+                }
+
+                // Update Prompt UI
+                const promptElement = document.getElementById('interactPrompt');
+                if (nearbyDesk) {
+                    promptElement.classList.remove('hidden');
+                    document.getElementById('promptText').innerText = `Contact ${nearbyDesk.short}`;
+                } else {
+                    promptElement.classList.add('hidden');
+                }
+            }
+
+            // Update Camera to follow player (Third Person Isometric-ish)
+            // Target camera position
+            const camTargetX = player.position.x;
+            const camTargetY = 20;
+            const camTargetZ = player.position.z + 20;
+
+            // Smooth camera follow
+            camera.position.x += (camTargetX - camera.position.x) * 0.1;
+            camera.position.y += (camTargetY - camera.position.y) * 0.1;
+            camera.position.z += (camTargetZ - camera.position.z) * 0.1;
+            
+            // Look slightly ahead of the player
+            camera.lookAt(player.position.x, 0, player.position.z - 5);
+
+            renderer.render(scene, camera);
+        }
+
+        // Handle Window Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- Modal Logic ---
+        function openModal(desk) {
+            isModalOpen = true;
+            for (let key in keys) keys[key] = false; // Reset keys
+            
+            // Snap player near chair and face desk
+            player.position.x = desk.chairPos.x;
+            player.position.z = desk.chairPos.z + (desk.isVertical ? 0 : 2); // Adjust slightly based on desk type
+            player.position.y = 0;
+            
+            // Face the desk
+            player.lookAt(desk.x, 0, desk.z);
+
+            document.getElementById('interactPrompt').classList.add('hidden');
+
+            document.getElementById('modalTitle').innerText = desk.name;
+            document.getElementById('modalHeader').style.backgroundColor = desk.color;
+            document.getElementById('modalDesc').innerText = desk.desc;
+            
+            const modal = document.getElementById('infoModal');
+            const content = document.getElementById('modalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('infoModal');
+            const content = document.getElementById('modalContent');
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                isModalOpen = false;
+                // Move player back slightly
+                player.position.z += 2;
+            }, 300);
+        }
+
+        document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+        document.getElementById('finishBtn').addEventListener('click', closeModal);
+
+        // Start Loop
+        animate();
+    </script>
+</body>
+</html>
